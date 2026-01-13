@@ -3,10 +3,10 @@ kind: Service
 metadata:
   name: myntra-service
 spec:
-  type: ClusterIP  # Changed to ClusterIP
+  type: ClusterIP
   selector:
     app: myntra
   ports:
-  - protocol: TCP
-    port: 80                 # Expose port 80
-    targetPort: 3000
+    - protocol: TCP
+      port: 80
+      targetPort: 80
