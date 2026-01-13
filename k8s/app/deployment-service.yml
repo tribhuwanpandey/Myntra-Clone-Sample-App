@@ -1,4 +1,3 @@
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,8 +13,7 @@ spec:
         app: myntra
     spec:
       containers:
-      - name: myntra
-        image: 323890959625.dkr.ecr.ap-south-1.amazonaws.com/myntra:latest
-        ports:
-          - containerPort: 3000   # Use port 3000
-
+        - name: myntra
+          image: 323890959625.dkr.ecr.ap-south-1.amazonaws.com/myntra:latest
+          ports:
+            - containerPort: 80
