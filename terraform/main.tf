@@ -1,6 +1,6 @@
 terraform {
   required_version = ">= 1.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -19,7 +19,7 @@ terraform {
 
 provider "aws" {
   region = var.region
-  
+
   default_tags {
     tags = local.common_tags
   }
@@ -28,9 +28,9 @@ provider "aws" {
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  
+
   exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
+    api_version = "client.authentication.k8s.io/v1"
     command     = "aws"
     args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
   }
@@ -40,9 +40,9 @@ provider "helm" {
   kubernetes {
     host                   = module.eks.cluster_endpoint
     cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-    
+
     exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
+      api_version = "client.authentication.k8s.io/v1"
       command     = "aws"
       args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
     }
@@ -51,14 +51,14 @@ provider "helm" {
 
 locals {
   name = "${var.project}-${var.environment}"
-  
+
   common_tags = {
     Project     = var.project
     Environment = var.environment
     ManagedBy   = "Terraform"
     Owner       = var.owner
   }
-  
+
   azs = slice(data.aws_availability_zones.available.names, 0, 3)
 }
 
@@ -116,14 +116,13 @@ module "eks" {
     main = {
       instance_types = var.node_instance_types
       capacity_type  = var.capacity_type
-      
+	ami_type     = "AL2_x86_64"	
+
       min_size     = var.node_min_size
       max_size     = var.node_max_size
       desired_size = var.node_desired_size
     }
   }
-
-  enable_cluster_creator_admin_permissions = true
 }
 
 ################################################################################
@@ -137,10 +136,14 @@ resource "aws_ecr_repository" "app" {
   image_scanning_configuration {
     scan_on_push = true
   }
+}
 
-  lifecycle_policy {
-    policy = jsonencode({
-      rules = [{
+resource "aws_ecr_lifecycle_policy" "app" {
+  repository = aws_ecr_repository.app.name
+
+  policy = jsonencode({
+    rules = [
+      {
         rulePriority = 1
         description  = "Keep last ${var.ecr_image_retention_count} images"
         selection = {
@@ -151,9 +154,9 @@ resource "aws_ecr_repository" "app" {
         action = {
           type = "expire"
         }
-      }]
-    })
-  }
+      }
+    ]
+  })
 }
 
 ################################################################################
@@ -164,7 +167,7 @@ resource "kubernetes_namespace" "argocd" {
   metadata {
     name = "argocd"
   }
-  
+
   depends_on = [module.eks]
 }
 
@@ -183,6 +186,8 @@ resource "helm_release" "argocd" {
       extraArgs = ["--insecure"]
     }
   })]
+
+  depends_on = [module.eks, kubernetes_namespace.argocd]
 }
 
 resource "kubernetes_manifest" "argocd_app" {
@@ -216,3 +221,5 @@ resource "kubernetes_manifest" "argocd_app" {
 
   depends_on = [helm_release.argocd]
 }
+
+
