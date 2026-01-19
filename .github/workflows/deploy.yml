@@ -12,31 +12,33 @@ on:
 env:
   AWS_REGION: ap-south-1
   ECR_REPOSITORY: myntra-clone
+  GITOPS_REPO: tribhuwanpandey/Myntra-Clone-Sample-App
   GITOPS_BRANCH: gitops
 
 jobs:
-  build-and-push:
+  build:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      # 1. Checkout the main branch
+      - uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      # 2. Configure AWS credentials
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
+      # 3. Login to ECR
+      - uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # 4. Set up Docker Buildx
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Build and Push Docker Image
+      # 5. Build & Push Docker image
+      - name: Build and Push
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -50,24 +52,27 @@ jobs:
   deploy:
     name: Update GitOps Deployment
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: build
 
     steps:
-      - name: Checkout GitOps Branch
-        uses: actions/checkout@v4
+      # 1. Checkout the gitops branch
+      - uses: actions/checkout@v4
         with:
+          repository: ${{ env.GITOPS_REPO }}
           ref: ${{ env.GITOPS_BRANCH }}
+          token: ${{ secrets.GITOPS_ACCESS_TOKEN }} # <-- Use your PAT token
 
-      - name: Update Deployment Image
+      # 2. Update image tag in deployment file
+      - name: Update Docker Image
         run: |
           NEW_IMAGE="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
-          echo "Updating deployment-service.yml with image: $NEW_IMAGE"
           sed -i "s|image: .*|image: $NEW_IMAGE|" k8s/app/deployment-service.yml
 
-      - name: Commit and Push Changes
+      # 3. Commit & push changes back to gitops branch
+      - name: Commit & Push
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add k8s/app/deployment-service.yml
-          git diff --staged --quiet || git commit -m "Deploy: ${{ github.sha }}"
+          git diff --staged --quiet || git commit -m "Deploy: ${{ github.sha }}" 
           git push origin ${{ env.GITOPS_BRANCH }}
