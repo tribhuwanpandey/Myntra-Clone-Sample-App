@@ -23,7 +23,7 @@ spec:
         - name: ecr-registry-secret   # ✅ ADD THIS
       containers:
       - name: app
-        image: 025910518584.dkr.ecr.ap-south-1.amazonaws.com/myntra-clone:latest  # ✅ FIXED ACCOUNT ID
+        image: 025910518584.dkr.ecr.ap-south-1.amazonaws.com/myntra-clone:126e257bdb24a863a987bf218ab851b7b30c20b3
         ports:
         - containerPort: 80
         resources:
