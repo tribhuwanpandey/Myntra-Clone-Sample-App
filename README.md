@@ -246,6 +246,16 @@ kubectl get events --sort-by='.lastTimestamp'
 
 ![alt text](<Screenshot 2026-01-19 192200.png>)
 
+## CI/CD(GitHub Action)
+
+### Build and Push
+
+![alt text](<Screenshot 2026-01-19 185246.png>)
+
+### Update GitOps Deployment
+
+![alt text](<Screenshot 2026-01-19 185257.png>)
+
 
 ## Amazon ECR  
 
